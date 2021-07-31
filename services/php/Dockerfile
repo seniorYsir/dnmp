@@ -10,12 +10,44 @@ RUN sed -i "s/dl-cdn.alpinelinux.org/${CONTAINER_PACKAGE_URL}/g" /etc/apk/reposi
 
 
 COPY ./extensions /tmp/extensions
+
+ADD ./add/grpc-1.27.0.tgz /tmp/extensions
+ADD ./add/protobuf-3.11.4.tgz /tmp/extensions
+
 WORKDIR /tmp/extensions
+
+RUN apk add --no-cache autoconf \
+	gcc \
+	g++ \
+	libc-dev \
+    zlib-dev \
+	re2c \
+    linux-headers \
+	git\
+	openssh-client \
+	make \
+    && cd /tmp/extensions/grpc-1.27.0 \
+    && phpize \
+	&& ./configure --with-php-config=/usr/local/bin/php-config \
+	&& make \
+    && make install \
+	&& docker-php-ext-enable grpc \
+    && docker-php-ext-install pcntl \
+    && cd /tmp/extensions/protobuf-3.11.4 \
+    &&	phpize \
+    && ./configure --with-php-config=/usr/local/bin/php-config \
+    && make \
+    && make install \
+    && docker-php-ext-enable protobuf
+    # && composer global require hirak/prestissimo
+
+
+
 RUN chmod +x install.sh \
     && sh install.sh \
-    && rm -rf /tmp/extensions
+    && rm -rf /tmp/extensions 
 
-
+RUN docker-php-ext-install pcntl
 RUN apk --no-cache add tzdata \
     && cp "/usr/share/zoneinfo/$TZ" /etc/localtime \
     && echo "$TZ" > /etc/timezone
